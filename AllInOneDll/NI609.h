@@ -66,6 +66,25 @@ public:
 	int SmallCarrierBack(void);
 	int BigCarrierBack(void);
 	int CloseDoor(void);
+	int AudioOut(void);
+	int AudioInsert(void);
+	int USBPowerInsert(void);
+	int TouchOut(void);
+	int TouchScreenOut(void);
+	int TouchScreenBack(void);
+	int TouchBack(void);
+	int MicOut(void);
+	int MicBack(void);
+	int UpLightOut(void);
+	int UpLightBack(void);
+	int UpOpticalFiberOut(void);
+	int UpOpticalFiberBack(void);
+	int DownOpticalFiberOut(void);
+	int DownOpticalFiberBack(void);
+	int DownLightOut(void);
+	int DownLightBack(void);
+	int UpHornOut(void);
+	int UpHornBack(void);
 };
 #endif
 

@@ -2,6 +2,7 @@
 #include "Entrance.h"
 #include "AllInOneDebug.h"
 #include "NI609.h"
+#include "Audio.h"
 #include <stdio.h>
 #include <Windows.h>
 #include "SaveLog.h"
@@ -12,6 +13,7 @@
 /************************************************************************/
 char dllFullPath[MAX_PATH];
 NI609 m_ni609;
+Audio m_ni4461;
 static int iGlobalStep = 0;
 
 typedef enum _ReturnValue
@@ -35,6 +37,7 @@ typedef enum _STEP
 	Small_Carrier_Back	= 8,
 	Big_Carrier_Back	= 9,
 	Close_Door			= 10,
+	Audio_Out			= 11,
 }Step;
 
 typedef enum _PORT
@@ -149,7 +152,7 @@ extern "C" __declspec(dllexport) int __stdcall AutoRunFunction()
 	SaveLog m_saveLog;
 
 	//1: initial the NI DAQ card
-	//iGlobalStep = InitialNI;
+	iGlobalStep = InitialNI;
 	err = m_ni609.InitialNI();
 	if (err != 0)
 	{
@@ -286,344 +289,170 @@ extern "C" __declspec(dllexport) int __stdcall AutoRunFunction()
 	}
 
 	//音频伸出，p3.1 to 1 
-	iWriteValue = m_ni609.GetPortWriteValue(port3) | 0x02;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_3_SENSOR),POERT_3_SENSOR,iWriteValue);
+	iGlobalStep = Audio_Out; 
+	err = m_ni609.AudioOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p6.3
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J20_SENSOR),J20_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Audio out fail");
 		return err;
 	}
-
 
 	//音频插入, p0.7 set 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x80;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.AudioInsert();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p9.6
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J19_SENSOR),J19_SENSOR,iReadValue,iCompareValue,true,6);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Audio inset fail");
 		return err;
 	}
+
 
 	//USB3.0电源插入， p0.4 set 1
- 	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x10;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.USBPowerInsert();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p6.7
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J9_SENSOR),J9_SENSOR,iReadValue,iCompareValue,true,7);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("USB2.0 power insert");
 		return err;
 	}
 
-
-	//touch伸出 p3.0,还需要确认第几个Bit?? set 1
-	iWriteValue = m_ni609.GetPortWriteValue(port3) | 0x01;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_3_SENSOR),POERT_3_SENSOR,iWriteValue);
+	//touch伸出 p3.0,
+	err = m_ni609.TouchOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p9.6
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J17_SENSOR),J17_SENSOR,iReadValue,iCompareValue,true,6);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Touch out");
 		return err;
 	}
+
 
 	//touch 屏幕  p4.1 set 1
-	iWriteValue = m_ni609.GetPortWriteValue(port4) | 0x02;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_4_SENSOR),POERT_4_SENSOR,iWriteValue);
+	err = m_ni609.TouchScreenOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#if 1
-	Sleep(3000);//没有sensor，暂时以延迟
-#else
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J17_SENSOR),J17_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Touch screen out");
 		return err;
 	}
-#endif
+
 
 	//touch 屏幕返回 p4.1 set 0
-	iWriteValue = m_ni609.GetPortWriteValue(port4) & 0xfd;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_4_SENSOR),POERT_4_SENSOR,iWriteValue);
+	err = m_ni609.TouchScreenBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#if 1
-	Sleep(1000);//没有sensor，暂时以延迟
-#else
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J17_SENSOR),J17_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Touch screen back");
 		return err;
 	}
-#endif
 
 
 	//touch 缩回 p3.0 set 0
-	iWriteValue = m_ni609.GetPortWriteValue(port3) & 0xfe;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_3_SENSOR),POERT_3_SENSOR,iWriteValue);
+	err = m_ni609.TouchBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#if 1
-	Sleep(3000);//没有sensor，暂时以延迟
-#else
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J17_SENSOR),J17_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Touch back");
 		return err;
 	}
-#endif
-
 
 	//mic伸出  p0.6 set 1  需要确认第几个bit?
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x40;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.MicOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p7.6
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J11_SENSOR),J11_SENSOR,iReadValue,iCompareValue,true,6);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("Mic out");
 		return err;
 	}
+
+
 	//mic 缩回  p0.6 set to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xbf;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.MicBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p6.2
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,2);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("Mic back");
+		return err;
 	}
 
 
 	//上光源伸出 p0.5 to 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x20;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpLightOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//pp6.0
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J14_SENSOR),J14_SENSOR,iReadValue,iCompareValue,true,0);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("up light out");
 		return err;
 	}
+
+
 	//上光源缩回  p0.5 to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xdf;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpLightBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("up light back");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
+
 
 	//上光纤伸出 p0.3 to 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x08;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpOpticalFiberOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p9.3
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J12_SENSOR),J12_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
+		m_saveLog.WriteLog("up optical filber out");
 		return err;
 	}
+
+
 	//上光纤缩回  p0.3 to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xf7;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpOpticalFiberBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("up optical filber back");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
 
 
 	//下光纤伸出 p0.2 to 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x04;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.DownOpticalFiberOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("down optical fiber out");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
+
 	//下光纤缩回 p0.2 to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xfb;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.DownOpticalFiberBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("down optical fiber back");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
+
 
 	//下光源p0.1 to 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x02;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.DownLightOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("down light out");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
 
 	//下光源p0.1 to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xfd;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.DownLightBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("down light back");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J18_SENSOR),J18_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
 
 
 	//上喇叭伸出 p0.0 to 1
-	iWriteValue = m_ni609.GetPortWriteValue(port0) | 0x01;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpHornOut();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-	//p9.2
-	iCompareValue = 1;
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J10_SENSOR),J10_SENSOR,iReadValue,iCompareValue,true,2);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("up horn out");
+		return err;
 	}
 
 
 	//上喇叭伸出 p0.0 to 0
-	iWriteValue = m_ni609.GetPortWriteValue(port0) & 0xfe;
-	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_0_SENSOR),POERT_0_SENSOR,iWriteValue);
+	err = m_ni609.UpHornBack();
 	if (err != 0)
 	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
+		m_saveLog.WriteLog("up horn back");
+		return err;
 	}
-#if 1
-	Sleep(3000);
-#else
-	err = m_ni609.ReadNI6509Function(m_ni609.GetHandle(J10_SENSOR),J10_SENSOR,iReadValue,iCompareValue,true,3);
-	if (err != 0)
-	{
-		m_saveLog.WriteLog("check the sound,write 1 fail");
-		return WriteNIFail;
-	}
-#endif
 
 	//开关按键 p4.2 to 1
 	iWriteValue = m_ni609.GetPortWriteValue(port4) | 0x04;
@@ -634,6 +463,7 @@ extern "C" __declspec(dllexport) int __stdcall AutoRunFunction()
 		return WriteNIFail;
 	}
 	Sleep(2000);
+
 	//开关按键 p4.2 to 0
 	iWriteValue = m_ni609.GetPortWriteValue(port4) & 0xfb;
 	err = m_ni609.WriteNI6509Function(m_ni609.GetHandle(POERT_4_SENSOR),POERT_4_SENSOR,iWriteValue);
@@ -840,6 +670,58 @@ int OutFunction()
 	{
 		m_saveLog.WriteLog("small carrier out ,write 1 fail");
 		return WriteNIFail;
+	}
+	return 0;
+}
+
+/************************************************************************
+C# call this function to make the NI4461 action
+sampleNum : 待写入采样个数
+sampleTotal ： 采样率
+sleepTime ： 响应时间
+声音频率：采样率 / 待写入采样个数
+************************************************************************/
+extern "C" __declspec(dllexport) int __stdcall AutoSoundOut(double volatage,int sampleNum,int sampleTotal,int sleepTime)
+{
+	int err = 0;
+	err = m_ni4461.InitialNI4461(volatage,sampleTotal);
+	if (err != 0)
+	{
+		return err;
+	}
+
+	err = m_ni4461.SountOut(sampleNum,sleepTime,sampleTotal);
+	if (err != 0)
+	{
+		return err;
+	}
+	return 0;
+}
+
+
+/************************************************************************
+C# call this function to make the NI4461 action
+sampleNum : 待写入采样个数
+sampleTotal ： 采样率
+sleepTime ： 响应时间
+声音频率：采样率 / 待写入采样个数
+minFreq : 起始扫频
+maxFreq : 结束扫频
+step    ： 间隔的扫频
+************************************************************************/
+extern "C" __declspec(dllexport) int __stdcall AutoSweepFrequency(double volatage,int sampleNum,int sampleTotal,int sleepTime,int minFreq,int maxFreq,int step)
+{
+	int err = 0;
+	err = m_ni4461.InitialNI4461(volatage,sampleTotal);
+	if (err != 0)
+	{
+		return err;
+	}
+	
+	err = m_ni4461.SweepFrequency(sampleTotal,sleepTime,minFreq,maxFreq,step);
+	if (err != 0)
+	{
+		return err;
 	}
 	return 0;
 }

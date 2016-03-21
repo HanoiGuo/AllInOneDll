@@ -7,4 +7,6 @@ ShowDlg @1
 AutoRunFunction @2
 ExternalCloseNI6509 @3
 GetProcessStep @4
+AutoSoundOut @5
+AutoSweepFrequency @6
     ; Explicit exports can go here

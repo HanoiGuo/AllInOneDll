@@ -102,6 +102,7 @@
   <ItemGroup>
     <ClCompile Include="AllInOneDebug.cpp" />
     <ClCompile Include="AllInOneDll.cpp" />
+    <ClCompile Include="Audio.cpp" />
     <ClCompile Include="Entrance.cpp" />
     <ClCompile Include="NI609.cpp" />
     <ClCompile Include="SaveLog.cpp" />
@@ -113,6 +114,7 @@
   <ItemGroup>
     <ClInclude Include="AllInOneDebug.h" />
     <ClInclude Include="AllInOneDll.h" />
+    <ClInclude Include="Audio.h" />
     <ClInclude Include="Entrance.h" />
     <ClInclude Include="NI609.h" />
     <ClInclude Include="NIDAQmx.h" />
